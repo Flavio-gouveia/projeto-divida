@@ -1,18 +1,18 @@
-import React, { useState } from 'react'
+import { useState, type FC, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useDebts } from '@/hooks/useDebts'
 import { useProfiles } from '@/hooks/useProfiles'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/Dialog'
 import { Label } from '@/components/ui/Label'
 import { formatCurrency } from '@/utils/formatCurrency'
 import { Plus, Search, Eye, Edit, Trash2 } from 'lucide-react'
 
-const DebtsPage: React.FC = () => {
+const DebtsPage: FC = () => {
   const { profile, isAdmin } = useAuth()
   const { debts, createDebt, deleteDebt } = useDebts(isAdmin ? undefined : profile?.id)
   const { profiles } = useProfiles()
@@ -35,7 +35,7 @@ const DebtsPage: React.FC = () => {
     return matchesSearch && matchesStatus
   })
 
-  const handleCreateDebt = async (e: React.FormEvent) => {
+  const handleCreateDebt = async (e: FormEvent) => {
     e.preventDefault()
     try {
       await createDebt({

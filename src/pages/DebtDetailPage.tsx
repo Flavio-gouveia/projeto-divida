@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect, type FC, type FormEvent } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useDebts } from '@/hooks/useDebts'
 import { usePaymentRequests } from '@/hooks/usePaymentRequests'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -12,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { formatCurrency } from '@/utils/formatCurrency'
 import { ArrowLeft, CheckCircle, XCircle, MessageSquare, Calendar, DollarSign } from 'lucide-react'
 
-const DebtDetailPage: React.FC = () => {
+const DebtDetailPage: FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { profile, isAdmin } = useAuth()
@@ -39,7 +38,7 @@ const DebtDetailPage: React.FC = () => {
     }
   }
 
-  const handleCreateRequest = async (e: React.FormEvent) => {
+  const handleCreateRequest = async (e: FormEvent) => {
     e.preventDefault()
     if (!debt || !profile) return
 

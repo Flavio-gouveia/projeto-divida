@@ -1,4 +1,4 @@
-import React from 'react'
+import type { FC } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useDebts } from '@/hooks/useDebts'
 import { usePaymentRequests } from '@/hooks/usePaymentRequests'
@@ -6,9 +6,9 @@ import { useProfiles } from '@/hooks/useProfiles'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { formatCurrency } from '@/utils/formatCurrency'
-import { CreditCard, Users, MessageSquare, TrendingUp, TrendingDown } from 'lucide-react'
+import { Users, MessageSquare, TrendingUp, TrendingDown } from 'lucide-react'
 
-const DashboardPage: React.FC = () => {
+const DashboardPage: FC = () => {
   const { profile, isAdmin } = useAuth()
   const { debts } = useDebts(isAdmin ? undefined : profile?.id)
   const { requests } = usePaymentRequests()

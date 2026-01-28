@@ -1,16 +1,16 @@
-import React, { useState } from 'react'
+import { useState, type FC } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePaymentRequests } from '@/hooks/usePaymentRequests'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/Dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
 import { formatCurrency } from '@/utils/formatCurrency'
-import { CheckCircle, XCircle, MessageSquare, Search, Calendar } from 'lucide-react'
+import { CheckCircle, XCircle, Search, Calendar } from 'lucide-react'
 
-const RequestsPage: React.FC = () => {
+const RequestsPage: FC = () => {
   const { profile, isAdmin } = useAuth()
   const { requests, approveRequest, rejectRequest } = usePaymentRequests(isAdmin ? undefined : profile?.id)
   

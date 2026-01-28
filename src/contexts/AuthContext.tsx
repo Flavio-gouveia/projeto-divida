@@ -39,65 +39,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const isAdmin = profile?.role === 'admin'
 
-  const createProfileIfNotExists = async (userId: string, email?: string) => {
-    try {
-      // Tentar buscar profile primeiro
-      const { data, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        // Erro real (não é "not found")
-        console.error('Error fetching profile:', fetchError)
-        setError(fetchError.message)
-        return
-      }
-
-      // Se profile não existe, criar um
-      if (!data && fetchError?.code === 'PGRST116') {
-        console.log('Profile not found, creating new one for user:', userId)
-        
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            name: email?.split('@')[0] || 'Usuário',
-            role: 'user'
-          })
-
-        if (insertError) {
-          console.error('Error creating profile:', insertError)
-          setError(insertError.message)
-          return
-        }
-
-        // Buscar o profile recém-criado
-        const { data: newProfile, error: newFetchError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single()
-
-        if (newFetchError) {
-          console.error('Error fetching new profile:', newFetchError)
-          setError(newFetchError.message)
-        } else {
-          setProfile(newProfile)
-          console.log('Profile created successfully:', newProfile)
-        }
-      } else if (data) {
-        // Profile existe
-        setProfile(data)
-        console.log('Profile loaded:', data)
-      }
-    } catch (error: any) {
-      console.error('Error in createProfileIfNotExists:', error)
-      setError(error.message)
-    }
-  }
-
   const fetchProfile = async (userId: string) => {
     try {
       const { data, error } = await supabase
