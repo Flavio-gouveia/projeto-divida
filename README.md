@@ -10,21 +10,32 @@ Uma aplicação web completa para gerenciamento de dívidas com autenticação, 
 - **Deploy**: Netlify
 - **Icons**: Lucide React
 
-## 📋 Funcionalidades
+### 🎨 **Funcionalidades Implementadas**
 
-### Para Usuários
+#### **Para Usuários:**
 - ✅ Cadastro e login
 - ✅ Visualizar próprias dívidas
 - ✅ Ver detalhes de dívidas
 - ✅ Solicitar confirmação de pagamento
-- ✅ Editar perfil (nome e avatar)
+- ✅ **Editar perfil (nome e avatar)**
+- ✅ **Upload de foto de perfil com preview**
+- ✅ **Avatar aparece no header e sidebar**
 
-### Para Administradores
+#### **Para Administradores:**
 - ✅ Visualizar todas as dívidas do sistema
 - ✅ Criar novas dívidas para usuários
 - ✅ Marcar dívidas como pagas/pendentes
 - ✅ Aprovar/rejeitar solicitações de pagamento
 - ✅ Dashboard com estatísticas gerais
+
+#### **Avatar System:**
+- ✅ Upload de imagens (JPG, PNG, WebP)
+- ✅ Validação de tamanho (máx 2MB)
+- ✅ Preview local antes do upload
+- ✅ Cache-buster para evitar imagens antigas
+- ✅ Fallback com inicial do nome
+- ✅ Organização por usuário no Storage
+- ✅ Políticas RLS para segurança
 
 ## 🛠️ Setup do Projeto
 
@@ -51,10 +62,32 @@ npm install
 2. Copie e cole o conteúdo do arquivo `supabase/schema.sql`
 3. Execute o script para criar tabelas, triggers e políticas RLS
 
-#### 3.3 Criar Bucket de Avatares
-1. Vá para **Storage**
+#### 3.3 Configurar Storage de Avatares
+1. Vá para **Storage** no painel do Supabase
 2. Crie um novo bucket chamado `avatars`
-3. Configure as políticas de acesso (já incluídas no schema.sql)
+3. Configure as políticas de acesso executando o `supabase/storage-policies.sql`
+
+#### 3.4 Configurar Bucket e Policies (Manual)
+Se preferir configurar manualmente:
+
+**Criar Bucket:**
+- Vá para Storage > Create bucket
+- Nome: `avatars`
+- Public bucket: `true`
+
+**Executar Policies SQL:**
+```sql
+-- Copie e cole o conteúdo de supabase/storage-policies.sql
+```
+
+**Estrutura de arquivos no Storage:**
+```
+avatars/
+├── {user-id}/
+│   ├── 1640995200000.jpg
+│   ├── 1640995300000.png
+│   └── ...
+```
 
 ### 4. Configurar Variáveis de Ambiente
 Crie um arquivo `.env` na raiz do projeto:

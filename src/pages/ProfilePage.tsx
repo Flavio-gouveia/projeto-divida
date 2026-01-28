@@ -1,134 +1,228 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { supabase } from '@/lib/supabaseClient'
-import { User, Camera, Upload } from 'lucide-react'
+import Avatar from '@/components/ui/Avatar'
+import { uploadAvatar, removeAvatar, updateProfile, getAvatarUrl } from '@/lib/avatar'
+import { Camera, Upload, AlertTriangle, RefreshCw, X } from 'lucide-react'
 
 const ProfilePage: React.FC = () => {
-  const { profile, refreshProfile } = useAuth()
+  const { profile, user, refreshProfile, loading: authLoading, error: authError } = useAuth()
   const [loading, setLoading] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
-  const [name, setName] = useState(profile?.name || '')
-  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '')
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [name, setName] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState('')
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Sincronizar estado local com profile do contexto
+  useEffect(() => {
+    if (profile) {
+      setName(profile.name || '')
+      setAvatarUrl(profile.avatar_url || '')
+      setPreviewUrl(null)
+      setSelectedFile(null)
+      setError(null)
+      setSuccess(null)
+    }
+  }, [profile])
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validar arquivo
+    const validation = validateAvatarFile(file)
+    if (!validation.valid) {
+      setError(validation.error || 'Erro na validação do arquivo')
+      return
+    }
+
+    setSelectedFile(file)
+    setError(null)
+    
+    // Criar preview local
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setPreviewUrl(e.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleRemovePreview = () => {
+    setPreviewUrl(null)
+    setSelectedFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!profile) return
 
+    console.log('🚀 Iniciando salvamento do profile...')
+    console.log('📁 Profile:', profile)
+    console.log('📝 Nome:', name)
+    console.log('🖼️ Tem arquivo?', !!selectedFile)
+    console.log('🔗 Avatar URL atual:', avatarUrl)
+
     setLoading(true)
+    setError(null)
+    setSuccess(null)
+    
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ name })
-        .eq('id', profile.id)
+      let finalAvatarUrl = avatarUrl
 
-      if (error) {
-        throw error
+      // Se há arquivo selecionado, fazer upload primeiro
+      if (selectedFile) {
+        console.log('⬆️ Fazendo upload do avatar...')
+        const uploadResult = await uploadAvatar(selectedFile, profile.id)
+        finalAvatarUrl = uploadResult.url
+        console.log('✅ Upload concluído:', finalAvatarUrl)
       }
 
+      // Atualizar profile
+      console.log('💾 Atualizando profile no banco...')
+      await updateProfile(profile.id, {
+        name,
+        avatar_url: finalAvatarUrl || null
+      })
+      console.log('✅ Profile atualizado com sucesso!')
+
+      // Atualizar estado local
+      setAvatarUrl(finalAvatarUrl || '')
+      setPreviewUrl(null)
+      setSelectedFile(null)
+
+      // Refresh do contexto para atualizar header
+      console.log('🔄 Atualizando contexto...')
       await refreshProfile()
-    } catch (error) {
-      console.error('Error updating profile:', error)
+      console.log('✅ Contexto atualizado!')
+
+      setSuccess('Perfil atualizado com sucesso!')
+    } catch (error: any) {
+      console.error('❌ Erro no salvamento:', error)
+      setError(error.message || 'Erro ao atualizar perfil')
     } finally {
+      console.log('🏁 Salvamento finalizado')
       setLoading(false)
-    }
-  }
-
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !profile) return
-
-    setUploadingAvatar(true)
-    try {
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${profile.id}.${fileExt}`
-      const filePath = `${profile.id}/${fileName}`
-
-      // Upload file to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true })
-
-      if (uploadError) {
-        throw uploadError
-      }
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath)
-
-      // Update profile with new avatar URL
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', profile.id)
-
-      if (updateError) {
-        throw updateError
-      }
-
-      setAvatarUrl(publicUrl)
-      await refreshProfile()
-    } catch (error) {
-      console.error('Error uploading avatar:', error)
-    } finally {
-      setUploadingAvatar(false)
     }
   }
 
   const handleRemoveAvatar = async () => {
     if (!profile || !avatarUrl) return
 
+    setUploadingAvatar(true)
+    setError(null)
+    
     try {
-      // Extract file path from URL
-      const urlParts = avatarUrl.split('/')
-      const filePath = `${urlParts[urlParts.length - 2]}/${urlParts[urlParts.length - 1]}`
-
-      // Remove file from storage
-      const { error: removeError } = await supabase.storage
-        .from('avatars')
-        .remove([filePath])
-
-      if (removeError) {
-        console.error('Error removing avatar:', removeError)
-      }
-
-      // Update profile to remove avatar URL
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: null })
-        .eq('id', profile.id)
-
-      if (updateError) {
-        throw updateError
-      }
-
+      await removeAvatar(avatarUrl)
+      
+      // Atualizar profile removendo avatar
+      await updateProfile(profile.id, { avatar_url: null })
+      
       setAvatarUrl('')
+      setPreviewUrl(null)
+      setSelectedFile(null)
+      
+      // Refresh do contexto
       await refreshProfile()
-    } catch (error) {
+      
+      setSuccess('Avatar removido com sucesso!')
+    } catch (error: any) {
       console.error('Error removing avatar:', error)
+      setError(error.message || 'Erro ao remover avatar')
+    } finally {
+      setUploadingAvatar(false)
     }
   }
 
-  if (!profile) {
+  const handleRetry = async () => {
+    setError(null)
+    await refreshProfile()
+  }
+
+  // Função de validação local (importada do avatar.ts)
+  const validateAvatarFile = (file: File) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      return { valid: false, error: 'Formato inválido. Use JPG, PNG ou WebP.' }
+    }
+    const maxSize = 2 * 1024 * 1024
+    if (file.size > maxSize) {
+      return { valid: false, error: 'Arquivo muito grande. Máximo 2MB.' }
+    }
+    return { valid: true }
+  }
+
+  // Estado 1: Carregando inicial
+  if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando perfil...</p>
+        </div>
       </div>
     )
   }
 
+  // Estado 2: Erro no auth ou profile não encontrado
+  if (authError || !profile) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center">
+            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Erro ao carregar perfil
+            </h3>
+            <p className="text-gray-600 mb-4">
+              {authError || 'Perfil não encontrado. Tente novamente.'}
+            </p>
+            <Button onClick={handleRetry} className="w-full">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Tentar novamente
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Estado 3: Sucesso - mostrar formulário
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Perfil</h1>
         <p className="text-gray-600">Gerencie suas informações pessoais</p>
       </div>
+
+      {/* Mensagens de sucesso/erro */}
+      {success && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="p-4">
+            <p className="text-sm text-green-800">{success}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-red-800">
+              <AlertTriangle className="w-5 h-5" />
+              <p className="text-sm">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
@@ -149,6 +243,7 @@ const ProfilePage: React.FC = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
+                    placeholder="Seu nome"
                   />
                 </div>
 
@@ -157,7 +252,7 @@ const ProfilePage: React.FC = () => {
                   <Input
                     id="email"
                     type="email"
-                    value={profile.email || ''}
+                    value={user?.email || ''}
                     disabled
                     className="bg-gray-50"
                   />
@@ -176,7 +271,7 @@ const ProfilePage: React.FC = () => {
                   />
                 </div>
 
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" disabled={loading || uploadingAvatar}>
                   {loading ? 'Salvando...' : 'Salvar Alterações'}
                 </Button>
               </form>
@@ -194,38 +289,54 @@ const ProfilePage: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col items-center">
-                <div className="relative">
-                  {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt="Avatar"
-                      className="w-24 h-24 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center">
-                      <User className="w-12 h-12 text-gray-400" />
-                    </div>
-                  )}
+                {/* Avatar grande */}
+                <div className="relative mb-4">
+                  <Avatar
+                    src={previewUrl || getAvatarUrl(avatarUrl)}
+                    name={name}
+                    size="xl"
+                    className="border-4 border-gray-100"
+                  />
                   
+                  {/* Botão de upload */}
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full hover:bg-primary/80 transition-colors"
+                    className="absolute bottom-0 right-0 bg-primary text-white p-3 rounded-full hover:bg-primary/80 transition-colors shadow-lg"
                     disabled={uploadingAvatar}
                   >
                     {uploadingAvatar ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                     ) : (
-                      <Camera className="w-4 h-4" />
+                      <Camera className="w-5 h-5" />
                     )}
                   </button>
                 </div>
 
+                {/* Preview com opção de remover */}
+                {previewUrl && (
+                  <div className="w-full mb-4">
+                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Upload className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm text-blue-800">Nova foto selecionada</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRemovePreview}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFileSelect}
                   className="hidden"
                 />
 
@@ -241,11 +352,12 @@ const ProfilePage: React.FC = () => {
                     {uploadingAvatar ? 'Enviando...' : 'Enviar Foto'}
                   </Button>
 
-                  {avatarUrl && (
+                  {avatarUrl && !previewUrl && (
                     <Button
                       type="button"
                       variant="outline"
                       onClick={handleRemoveAvatar}
+                      disabled={uploadingAvatar}
                       className="w-full text-red-600 hover:text-red-700"
                     >
                       Remover Foto
@@ -254,8 +366,8 @@ const ProfilePage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="text-sm text-gray-500 text-center">
-                <p>Formatos aceitos: JPG, PNG, GIF</p>
+              <div className="text-sm text-gray-500 text-center space-y-1">
+                <p>Formatos: JPG, PNG, WebP</p>
                 <p>Tamanho máximo: 2MB</p>
               </div>
             </CardContent>
