@@ -66,12 +66,6 @@ const ProfilePage: React.FC = () => {
     e.preventDefault()
     if (!profile) return
 
-    console.log('🚀 Iniciando salvamento do profile...')
-    console.log('📁 Profile:', profile)
-    console.log('📝 Nome:', name)
-    console.log('🖼️ Tem arquivo?', !!selectedFile)
-    console.log('🔗 Avatar URL atual:', avatarUrl)
-
     setLoading(true)
     setError(null)
     setSuccess(null)
@@ -81,19 +75,15 @@ const ProfilePage: React.FC = () => {
 
       // Se há arquivo selecionado, fazer upload primeiro
       if (selectedFile) {
-        console.log('⬆️ Fazendo upload do avatar...')
         const uploadResult = await uploadAvatar(selectedFile, profile.id)
         finalAvatarUrl = uploadResult.url
-        console.log('✅ Upload concluído:', finalAvatarUrl)
       }
 
       // Atualizar profile
-      console.log('💾 Atualizando profile no banco...')
       await updateProfile(profile.id, {
         name,
         avatar_url: finalAvatarUrl || null
       })
-      console.log('✅ Profile atualizado com sucesso!')
 
       // Atualizar estado local
       setAvatarUrl(finalAvatarUrl || '')
@@ -101,16 +91,13 @@ const ProfilePage: React.FC = () => {
       setSelectedFile(null)
 
       // Refresh do contexto para atualizar header
-      console.log('🔄 Atualizando contexto...')
       await refreshProfile()
-      console.log('✅ Contexto atualizado!')
 
       setSuccess('Perfil atualizado com sucesso!')
     } catch (error: any) {
-      console.error('❌ Erro no salvamento:', error)
+      console.error('Error updating profile:', error)
       setError(error.message || 'Erro ao atualizar perfil')
     } finally {
-      console.log('🏁 Salvamento finalizado')
       setLoading(false)
     }
   }

@@ -107,22 +107,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .single()
 
       if (error) {
+        // Se não encontrar profile, tenta criar um
         if (error.code === 'PGRST116') {
-          // Profile não encontrado - criar um novo
-          console.log('Profile not found, will create new one')
-          await createProfileIfNotExists(userId)
-        } else {
-          console.error('Error fetching profile:', error)
-          setError(error.message)
+          const { data: userData } = await supabase.auth.getUser()
+          if (userData.user?.email) {
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                name: userData.user.email.split('@')[0],
+                role: 'user'
+              })
+            
+            if (!insertError) {
+              // Tenta buscar novamente
+              const { data: newData } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', userId)
+                .single()
+              
+              if (newData) {
+                setProfile(newData)
+                return
+              }
+            }
+          }
         }
-        return
+        throw error
       }
 
       setProfile(data)
-      console.log('Profile loaded successfully:', data)
     } catch (error: any) {
       console.error('Error fetching profile:', error)
-      setError(error.message)
+      setError(error.message || 'Erro ao buscar perfil')
+    } finally {
+      setLoading(false)
     }
   }
 
