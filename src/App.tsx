@@ -11,6 +11,7 @@ import DashboardPage from '@/pages/DashboardPage'
 import DebtsPage from '@/pages/DebtsPage'
 import DebtDetailPage from '@/pages/DebtDetailPage'
 import RequestsPage from '@/pages/RequestsPage'
+import UsersPage from '@/pages/UsersPage'
 import ProfilePage from '@/pages/ProfilePage'
 
 // Layout
@@ -35,6 +36,11 @@ function App() {
           <Route path="debts" element={<DebtsPage />} />
           <Route path="debts/:id" element={<DebtDetailPage />} />
           <Route path="requests" element={<RequestsPage />} />
+          <Route path="users" element={
+            <ProtectedRoute requireAdmin>
+              <UsersPage />
+            </ProtectedRoute>
+          } />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
         

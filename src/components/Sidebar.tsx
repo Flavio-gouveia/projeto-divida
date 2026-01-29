@@ -7,6 +7,7 @@ import {
   CreditCard, 
   MessageSquare, 
   User,
+  Users,
   X
 } from 'lucide-react'
 
@@ -23,6 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { name: 'Dashboard', href: '/app/dashboard', icon: Home },
     { name: 'Dívidas', href: '/app/debts', icon: CreditCard },
     { name: 'Solicitações', href: '/app/requests', icon: MessageSquare },
+    ...(isAdmin ? [{ name: 'Usuários', href: '/app/users', icon: Users }] : []),
     { name: 'Perfil', href: '/app/profile', icon: User },
   ]
 

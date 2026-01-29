@@ -1,8 +1,10 @@
 export interface Profile {
   id: string
   name: string
+  email?: string
   avatar_url?: string
   role: 'admin' | 'user'
+  is_active?: boolean
   created_at: string
 }
 
