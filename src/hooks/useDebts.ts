@@ -14,14 +14,7 @@ export const useDebts = (userId?: string) => {
 
       let query = supabase
         .from('debts')
-        .select(`
-          *,
-          profiles (
-            id,
-            name,
-            avatar_url
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (userId) {

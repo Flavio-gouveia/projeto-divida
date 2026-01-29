@@ -40,6 +40,7 @@ const DebtsPage: FC = () => {
     try {
       await createDebt({
         ...newDebt,
+        due_date: newDebt.due_date ? newDebt.due_date : undefined,
         created_by: profile!.id,
         status: 'pending'
       })
