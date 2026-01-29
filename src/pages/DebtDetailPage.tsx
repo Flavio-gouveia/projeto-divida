@@ -1,4 +1,4 @@
-import { useState, useEffect, type FC, type FormEvent } from 'react'
+import { useState, useEffect, type FC } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useDebts } from '@/hooks/useDebts'
@@ -7,21 +7,19 @@ import { Button } from '@/components/ui/Button'
 import { Label } from '@/components/ui/Label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/Dialog'
 import { formatCurrency } from '@/utils/formatCurrency'
 import { ArrowLeft, CheckCircle, XCircle, MessageSquare, Calendar, DollarSign } from 'lucide-react'
+import RequestPaymentDialog from '@/components/RequestPaymentDialog'
 
 const DebtDetailPage: FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { profile, isAdmin } = useAuth()
+  const { isAdmin } = useAuth()
   const { debts, updateDebt } = useDebts()
-  const { createRequest, requests } = usePaymentRequests()
+  const { requests } = usePaymentRequests()
   
   const [debt, setDebt] = useState(debts.find(d => d.id === id))
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false)
-  const [requestMessage, setRequestMessage] = useState('')
-  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const foundDebt = debts.find(d => d.id === id)
@@ -38,25 +36,9 @@ const DebtDetailPage: FC = () => {
     }
   }
 
-  const handleCreateRequest = async (e: FormEvent) => {
-    e.preventDefault()
-    if (!debt || !profile) return
-
-    setLoading(true)
-    try {
-      await createRequest({
-        debt_id: debt.id,
-        user_id: profile.id,
-        message: requestMessage,
-        status: 'open'
-      })
-      setIsRequestDialogOpen(false)
-      setRequestMessage('')
-    } catch (error) {
-      console.error('Error creating payment request:', error)
-    } finally {
-      setLoading(false)
-    }
+  const handleCreateRequest = async () => {
+    if (!debt) return
+    setIsRequestDialogOpen(true)
   }
 
   const debtRequests = requests.filter(r => r.debt_id === id)
@@ -209,44 +191,10 @@ const DebtDetailPage: FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {!isAdmin && debt.status === 'pending' && (
-                <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="w-full">
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Solicitar Confirmação de Pagamento
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Solicitar Confirmação de Pagamento</DialogTitle>
-                      <DialogDescription>
-                        Envie uma mensagem para o administrador confirmar o pagamento desta dívida
-                      </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleCreateRequest} className="space-y-4">
-                      <div>
-                        <Label htmlFor="message">Mensagem</Label>
-                        <textarea
-                          id="message"
-                          value={requestMessage}
-                          onChange={(e) => setRequestMessage(e.target.value)}
-                          className="w-full p-2 border rounded-md min-h-[100px] resize-none"
-                          placeholder="Descreva como e quando você realizou o pagamento..."
-                          required
-                        />
-                      </div>
-                      
-                      <div className="flex justify-end space-x-2">
-                        <Button type="button" variant="outline" onClick={() => setIsRequestDialogOpen(false)}>
-                          Cancelar
-                        </Button>
-                        <Button type="submit" disabled={loading}>
-                          {loading ? 'Enviando...' : 'Enviar Solicitação'}
-                        </Button>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
+                <Button className="w-full" onClick={handleCreateRequest}>
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Solicitar Confirmação de Pagamento
+                </Button>
               )}
               
               {isAdmin && (
@@ -276,6 +224,16 @@ const DebtDetailPage: FC = () => {
           </Card>
         </div>
       </div>
+
+      {debt && (
+        <RequestPaymentDialog
+          isOpen={isRequestDialogOpen}
+          onClose={() => setIsRequestDialogOpen(false)}
+          debtId={debt.id}
+          debtTitle={debt.title}
+          debtAmount={debt.amount_cents}
+        />
+      )}
     </div>
   )
 }

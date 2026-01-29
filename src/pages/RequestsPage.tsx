@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
 import { formatCurrency } from '@/utils/formatCurrency'
-import { CheckCircle, XCircle, Search, Calendar } from 'lucide-react'
+import { CheckCircle, XCircle, Search, Calendar, Download, FileText } from 'lucide-react'
 
 const RequestsPage: FC = () => {
   const { user, isAdmin } = useAuth()
@@ -133,6 +133,28 @@ const RequestsPage: FC = () => {
                         <span>{new Date(request.created_at).toLocaleDateString('pt-BR')}</span>
                       </div>
                     </div>
+                    
+                    {request.receipt_url && (
+                      <div className="bg-blue-50 rounded p-3 mb-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <FileText className="w-4 h-4 mr-2 text-blue-600" />
+                            <div>
+                              <p className="text-sm font-medium text-blue-900">Comprovante anexado</p>
+                              <p className="text-xs text-blue-700">{request.receipt_name}</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(request.receipt_url, '_blank')}
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                     
                     {request.admin_note && (
                       <div className="bg-gray-50 rounded p-3 mb-3">

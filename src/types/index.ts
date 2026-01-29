@@ -27,6 +27,8 @@ export interface PaymentRequest {
   debt_id: string
   user_id: string
   message: string
+  receipt_url?: string
+  receipt_name?: string
   status: 'open' | 'approved' | 'rejected'
   admin_note?: string
   created_at: string
