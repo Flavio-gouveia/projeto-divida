@@ -11,8 +11,8 @@ import { formatCurrency } from '@/utils/formatCurrency'
 import { CheckCircle, XCircle, Search, Calendar } from 'lucide-react'
 
 const RequestsPage: FC = () => {
-  const { profile, isAdmin } = useAuth()
-  const { requests, approveRequest, rejectRequest } = usePaymentRequests(isAdmin ? undefined : profile?.id)
+  const { user, isAdmin } = useAuth()
+  const { requests, approveRequest, rejectRequest } = usePaymentRequests(isAdmin ? undefined : user?.id)
   
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'approved' | 'rejected'>('all')

@@ -13,8 +13,8 @@ import { formatCurrency } from '@/utils/formatCurrency'
 import { Plus, Search, Eye, Edit, Trash2 } from 'lucide-react'
 
 const DebtsPage: FC = () => {
-  const { profile, isAdmin } = useAuth()
-  const { debts, createDebt, deleteDebt } = useDebts(isAdmin ? undefined : profile?.id)
+  const { user, isAdmin } = useAuth()
+  const { debts, createDebt, deleteDebt } = useDebts(isAdmin ? undefined : user?.id)
   const { profiles } = useProfiles()
   
   const [searchTerm, setSearchTerm] = useState('')
@@ -41,7 +41,7 @@ const DebtsPage: FC = () => {
       await createDebt({
         ...newDebt,
         due_date: newDebt.due_date ? newDebt.due_date : undefined,
-        created_by: profile!.id,
+        created_by: user!.id,
         status: 'pending'
       })
       setIsCreateDialogOpen(false)

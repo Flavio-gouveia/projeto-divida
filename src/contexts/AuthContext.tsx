@@ -45,51 +45,54 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single()
+        .maybeSingle()
 
       if (error) {
-        // Se não encontrar profile, tenta criar um
-        if (error.code === 'PGRST116') {
-          const { data: userData } = await supabase.auth.getUser()
-          if (userData.user?.email) {
-            const { error: insertError } = await supabase
-              .from('profiles')
-              .insert({
-                id: userId,
-                name: userData.user.email.split('@')[0],
-                role: 'user'
-              })
-            
-            if (!insertError) {
-              // Tenta buscar novamente
-              const { data: newData } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .single()
-              
-              if (newData) {
-                setProfile(newData)
-                return
-              }
-            }
-          }
-        }
         throw error
       }
 
-      setProfile(data)
+      if (data) {
+        setProfile(data)
+        return
+      }
+
+      const { data: userData } = await supabase.auth.getUser()
+      if (!userData.user?.email) {
+        setProfile(null)
+        return
+      }
+
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          name: userData.user.email.split('@')[0],
+          role: 'user'
+        })
+
+      if (insertError) {
+        throw insertError
+      }
+
+      const { data: newData, error: newError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (newError) {
+        throw newError
+      }
+
+      setProfile(newData ?? null)
     } catch (error: any) {
-      console.error('Error fetching profile:', error)
+      setProfile(null)
       setError(error.message || 'Erro ao buscar perfil')
-    } finally {
-      setLoading(false)
     }
   }
 
   const refreshProfile = async () => {
     if (user) {
-      console.log('Refreshing profile for user:', user.id)
       await fetchProfile(user.id)
     }
   }
@@ -97,56 +100,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     let mounted = true
 
-    const getSession = async () => {
-      try {
-        console.log('Getting initial session...')
-        const { data: { session }, error } = await supabase.auth.getSession()
-        
-        if (error) {
-          console.error('Error getting session:', error)
-          setError(error.message)
-          setLoading(false)
-          return
-        }
+    const withTimeout = async <T,>(promise: Promise<T>, ms: number) => {
+      return Promise.race([
+        promise,
+        new Promise<T>((_, reject) => {
+          setTimeout(() => reject(new Error('Timeout ao carregar sessão')), ms)
+        })
+      ])
+    }
 
-        if (mounted) {
-          setSession(session)
-          setUser(session?.user ?? null)
-          
-          if (session?.user) {
-            console.log('Session found, loading profile for:', session.user.id)
-            await fetchProfile(session.user.id)
-          }
-          
-          setLoading(false)
-        }
-      } catch (error: any) {
-        console.error('Error in getSession:', error)
-        if (mounted) {
+    const init = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const { data, error } = await withTimeout(supabase.auth.getSession(), 3000) as any
+
+        if (!mounted) return
+
+        if (error) {
+          setSession(null)
+          setUser(null)
+          setProfile(null)
           setError(error.message)
-          setLoading(false)
+        } else {
+          setSession(data.session)
+          setUser(data.session?.user ?? null)
         }
+      } catch {
+        if (!mounted) return
+        setSession(null)
+        setUser(null)
+        setProfile(null)
+      } finally {
+        if (mounted) setLoading(false)
       }
     }
 
-    getSession()
+    init()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id)
-        
-        if (mounted) {
-          setSession(session)
-          setUser(session?.user ?? null)
-          
-          if (session?.user) {
-            await fetchProfile(session.user.id)
-          } else {
-            setProfile(null)
-          }
-          
-          setLoading(false)
-        }
+      (_event, session) => {
+        if (!mounted) return
+        setSession(session)
+        setUser(session?.user ?? null)
       }
     )
 
@@ -156,21 +152,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [])
 
+  useEffect(() => {
+    let active = true
+
+    setError(null)
+    setProfile(null)
+
+    if (!user) {
+      return
+    }
+
+    ;(async () => {
+      await fetchProfile(user.id)
+    })()
+
+    return () => {
+      active = false
+    }
+  }, [user?.id])
+
   const signIn = async (email: string, password: string) => {
     try {
       setError(null)
-      const { error } = await supabase.auth.signInWithPassword({
+      setLoading(true)
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
       
       if (error) {
+        console.error('signIn error:', error)
         setError(error.message)
+        setLoading(false)
+        return { error }
       }
       
-      return { error }
+      setLoading(false)
+      return { error: null }
     } catch (error: any) {
       setError(error.message)
+      setLoading(false)
       return { error }
     }
   }
@@ -203,6 +225,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setError(null)
       await supabase.auth.signOut()
+      // Limpar estado local imediatamente
+      setUser(null)
+      setProfile(null)
+      setSession(null)
+      setError(null)
     } catch (error: any) {
       setError(error.message)
     }

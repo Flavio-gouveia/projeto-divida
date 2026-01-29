@@ -9,12 +9,12 @@ import { formatCurrency } from '@/utils/formatCurrency'
 import { Users, MessageSquare, TrendingUp, TrendingDown } from 'lucide-react'
 
 const DashboardPage: FC = () => {
-  const { profile, isAdmin } = useAuth()
-  const { debts } = useDebts(isAdmin ? undefined : profile?.id)
+  const { user, profile, isAdmin } = useAuth()
+  const { debts } = useDebts(isAdmin ? undefined : user?.id)
   const { requests } = usePaymentRequests()
   const { profiles } = useProfiles()
 
-  const userDebts = isAdmin ? debts : debts.filter(debt => debt.user_id === profile?.id)
+  const userDebts = isAdmin ? debts : debts.filter(debt => debt.user_id === user?.id)
   const pendingDebts = userDebts.filter(debt => debt.status === 'pending')
   const paidDebts = userDebts.filter(debt => debt.status === 'paid')
   const openRequests = requests.filter(request => request.status === 'open')
@@ -177,7 +177,7 @@ const DashboardPage: FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {requests.filter(r => r.user_id === profile?.id).length}
+              {requests.filter(r => r.user_id === user?.id).length}
             </div>
             <p className="text-xs text-muted-foreground">
               Solicitações enviadas
