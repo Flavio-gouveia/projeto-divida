@@ -153,8 +153,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [])
 
   useEffect(() => {
-    let active = true
-
     setError(null)
     setProfile(null)
 
@@ -165,10 +163,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     ;(async () => {
       await fetchProfile(user.id)
     })()
-
-    return () => {
-      active = false
-    }
   }, [user?.id])
 
   const signIn = async (email: string, password: string) => {
@@ -176,7 +170,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError(null)
       setLoading(true)
       
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
